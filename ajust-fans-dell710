@@ -1,0 +1,59 @@
+!/bin/bash
+# a script to ajust the fans on a dell 710, and to keep it alot more quite :) and if temperature gets to high, shut down the server
+# the tempCpu is a bit ugly, and need a refactor. But it works
+# cron  * * * * * ajust-fans.sh
+
+# Read the max CPU temp from sensors (lm-sensor) 
+tempCpu=$(sensors | grep "Core"| cut -d ":" -f2 | cut -d "C" -f1| sed 's/^ *//g'| cut -d"."  -f1| sed 's/+//' |sort -r| sed -n 1p )
+# Define CPU limie
+
+# Set variables
+
+host="xxx.xxx.xxx.xxx"
+user="xxx"
+password="xxxx"
+ulowCpu="10"
+lowCpu="30"
+minCpu="50"
+medCpu="56"
+maxCpu="60"
+panicCpu="67"
+
+
+if [ $tempCpu -le $ulowCpu ] ; then
+        ipmitool -I lanplus -H $host -U $user -P $password raw 0x30 0x30 0x01 0x00 >> /dev/null
+        ipmitool -I lanplus -H $host -U $user -P $password raw 0x30 0x30 0x02 0xff 0x00 >> /dev/null
+        # Set to less than 1200 RPM (0%)
+
+
+elif [ $tempCpu -le $lowCpu ] ; then
+        ipmitool -I lanplus -H $host -U $user -P $password raw 0x30 0x30 0x01 0x00 >> /dev/null
+        ipmitool -I lanplus -H $host -U $user -P $password raw 0x30 0x30 0x02 0xff 0x05 >> /dev/null
+        # Set to 1800 RPM (5%)
+
+elif [ $tempCpu -le $minCpu ] ; then
+
+        ipmitool -I lanplus -H $host -U $user -P $password raw 0x30 0x30 0x01 0x00 >> /dev/null
+        ipmitool -I lanplus -H $host -U $user -P $password raw 0x30 0x30 0x02 0xff 0x13 >> /dev/null
+        # Set to 3200 RPM
+
+elif [ $tempCpu -le $medCpu ] ; then
+
+        ipmitool -I lanplus -H $host -U $user -P $password raw 0x30 0x30 0x01 0x00 >> /dev/null
+        ipmitool -I lanplus -H $host -U $user -P $password raw 0x30 0x30 0x02 0xff 0x17 >> /dev/null
+        # Set to 3600 RPM
+
+elif [ $tempCpu -le $maxCpu ] ; then
+
+        ipmitool -I lanplus -H $host -U $user -P $password raw 0x30 0x30 0x01 0x00 >> /dev/null
+        ipmitool -I lanplus -H $host -U $user -P $password raw 0x30 0x30 0x02 0xff 0x20 >> /dev/null
+        # Set to 5000 RPM
+   
+elif [ $tempCpu -le $panicCpu ] ; then
+        ipmitool -I lanplus -H $host -U $user -P $password power off
+   
+else
+        # Let the server decide
+        ipmitool -I lanplus -H $host -U $user -P $password raw 0x30 0x30 0x01 0x01 >> /dev/null
+   
+fi
